@@ -1,0 +1,306 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Video Playet Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            background: #000;
+        }
+
+            .video-container iframe {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
+
+        .glass-dark {
+            background: rgba(30, 30, 35, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background: #0f1115;
+            color: #e5e7eb;
+            min-height: 100vh;
+        }
+        /* Custom Gradient Styling */
+        .btn-gradient {
+            background: linear-gradient(to right, #ffb6c1, #800080);
+            transition: all 0.3s ease;
+            color: white;
+            border: none;
+        }
+
+            .btn-gradient:hover:not(:disabled) {
+                opacity: 0.9;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(255, 182, 193, 0.4);
+            }
+
+            .btn-gradient:active:not(:disabled) {
+                transform: translateY(0);
+            }
+
+            .btn-gradient:disabled {
+                background: #374151; /* Gray for disabled state */
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+        .control-icon-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+
+            .control-icon-btn:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+        /* Volume Input Styling */
+        .volume-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .flash-red {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+    </style>
+</head>
+<body class="relative flex flex-col items-center justify-center p-4 md:p-8">
+
+    <!-- Home Button (Top Right) -->
+    <a href="https://nhl.com" class="fixed top-6 right-6 z-50 btn-gradient px-5 py-2 rounded-full font-semibold text-sm shadow-lg flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+        Home
+    </a>
+
+    <div class="max-w-4xl w-full space-y-6">
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Now Playing</h1>
+            <p class="text-gray-400 text-sm md:text-base">Watching: <span id="video-title" class="text-indigo-300">Loading...</span></p>
+        </div>
+
+        <!-- Player Section -->
+        <div class="video-container" id="player-wrapper">
+            <div id="player"></div>
+        </div>
+
+        <!-- Controls UI -->
+        <div class="glass-dark p-6 rounded-3xl space-y-6">
+
+            <!-- Secondary Playback Controls (Play/Pause/Skim) -->
+            <div class="flex items-center justify-center gap-6">
+                <!-- Back 15s -->
+                <button id="back-15" class="control-icon-btn p-3 rounded-full text-gray-300" title="Back 15s">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" /></svg>
+                </button>
+
+                <!-- Play/Pause -->
+                <button id="play-pause" class="w-16 h-16 flex items-center justify-center btn-gradient rounded-full shadow-lg transition-all active:scale-95">
+                    <span id="play-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                    </span>
+                    <span id="pause-icon" class="hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+                    </span>
+                </button>
+
+                <!-- Forward 15s -->
+                <button id="forward-15" class="control-icon-btn p-3 rounded-full text-gray-300" title="Forward 15s">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 17 5-5-5-5M6 17l5-5-5-5" /></svg>
+                </button>
+            </div>
+
+            <!-- Playlist Navigation (Next/Prev) -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/5">
+                <button id="prev-btn" class="w-full sm:w-auto px-6 py-2.5 btn-gradient rounded-xl disabled:opacity-20 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                    Previous
+                </button>
+
+                <div class="flex items-center gap-3">
+                    <span id="video-index" class="text-xs font-mono text-gray-500 bg-black/30 px-3 py-1 rounded-full tracking-widest">0 / 0</span>
+                </div>
+
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button id="next-btn" class="flex-1 sm:flex-none px-6 py-2.5 btn-gradient rounded-xl disabled:opacity-20 flex items-center justify-center gap-2">
+                        Next
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                    </button>
+                    <!-- Volume Input -->
+                    <div class="relative flex items-center">
+                        <input type="number" id="volume-input" min="0" max="100" placeholder="Vol" class="volume-input w-16 px-2 py-2.5 rounded-xl text-center text-sm focus:outline-none" title="Type volume (1-100) and press Enter">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center">
+            <a href="https://www.youtube.com/playlist?list=PLINj2JJM1jxMKUSiMcZPYvORDFh5sa8XH" target="_blank" class="text-[10px] uppercase tracking-widest text-gray-600 hover:text-pink-400 transition-colors">
+                External Link • YouTube Playlist
+            </a>
+        </div>
+    </div>
+
+    <script>
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var player;
+        const playlistId = 'PLINj2JJM1jxMKUSiMcZPYvORDFh5sa8XH';
+        const titleEl = document.getElementById('video-title');
+        const indexEl = document.getElementById('video-index');
+        const nextBtn = document.getElementById('next-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const playPauseBtn = document.getElementById('play-pause');
+        const playIcon = document.getElementById('play-icon');
+        const pauseIcon = document.getElementById('pause-icon');
+        const volumeInput = document.getElementById('volume-input');
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                height: '1920px',
+                width: '1080px',
+                playerVars: {
+                    'listType': 'playlist',
+                    'list': playlistId,
+                    'autoplay': 0,
+                    'controls': 1,
+                    'rel': 0,
+                    'modestbranding': 1,
+                    'enablejsapi': 1,
+                    'origin': location.origin
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange,
+                    'onError': onPlayerError
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            if (!player.getPlaylist()) {
+                player.cuePlaylist({ list: playlistId });
+            }
+            // Sync initial volume
+            volumeInput.value = player.getVolume();
+            updateUI();
+        }
+
+        function onPlayerError(event) {
+            console.error("YouTube Player Error:", event.data);
+            titleEl.textContent = "Error loading video. Try clicking 'Next'.";
+        }
+
+        function onPlayerStateChange(event) {
+            updateUI();
+            if (event.data === YT.PlayerState.PLAYING) {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            } else {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            }
+        }
+
+        function updateUI() {
+            if (!player || typeof player.getPlaylist !== 'function') return;
+
+            const playlist = player.getPlaylist();
+            const currentIndex = player.getPlaylistIndex();
+
+            if (playlist && currentIndex !== -1) {
+                indexEl.textContent = `${currentIndex + 1} / ${playlist.length}`;
+                prevBtn.disabled = currentIndex === 0;
+                nextBtn.disabled = currentIndex === playlist.length - 1;
+
+                const videoData = player.getVideoData();
+                if (videoData && videoData.title) {
+                    titleEl.textContent = videoData.title;
+                }
+            } else {
+                indexEl.textContent = "- / -";
+            }
+        }
+
+        playPauseBtn.addEventListener('click', () => {
+            if (!player) return;
+            const state = player.getPlayerState();
+            if (state === YT.PlayerState.PLAYING) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
+            }
+        });
+
+        document.getElementById('back-15').addEventListener('click', () => {
+            if (!player) return;
+            const currentTime = player.getCurrentTime();
+            player.seekTo(Math.max(currentTime - 15, 0), true);
+        });
+
+        document.getElementById('forward-15').addEventListener('click', () => {
+            if (!player) return;
+            const currentTime = player.getCurrentTime();
+            player.seekTo(currentTime + 15, true);
+        });
+
+        // Volume logic
+        volumeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                let val = parseInt(volumeInput.value);
+                if (isNaN(val)) val = 100;
+                val = Math.max(0, Math.min(100, val));
+
+                if (player && typeof player.setVolume === 'function') {
+                    player.setVolume(val);
+
+                    // Flash red effect
+                    volumeInput.classList.add('flash-red');
+                    setTimeout(() => {
+                        volumeInput.classList.remove('flash-red');
+                    }, 500);
+                }
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (player && typeof player.nextVideo === 'function') {
+                player.nextVideo();
+                setTimeout(updateUI, 500);
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (player && typeof player.previousVideo === 'function') {
+                player.previousVideo();
+                setTimeout(updateUI, 500);
+            }
+        });
+
+        setInterval(updateUI, 2000);
+    </script>
+</body>
+</html>
